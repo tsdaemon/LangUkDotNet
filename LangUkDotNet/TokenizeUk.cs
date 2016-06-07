@@ -12,9 +12,9 @@ namespace LangUkDotNet
     /// <summary>
     /// Ukrainian tokenization script based on
     /// [standard tokenization algorithm] (https://github.com/lang-uk/ner-uk/blob/master/doc/tokenization.md)
-    /// 2016 (c) Vsevolod Dyomkin vseloved@gmail.com
+    /// 2016 (c) Vsevolod Dyomkin vseloved@gmail.com, Dmitry Chaplinsky chaplinsky.dmitry@gmail.com
     /// </summary>
-    public class NerUk
+    public class TokenizeUk
     {
         #region constants
         readonly string[] abbrs = @"ім.
@@ -29,39 +29,47 @@ namespace LangUkDotNet
 див.
 п.
 с.
-м.".Split();
+м.".Trim().Split();
 
-        readonly Regex tokenizationRules = new Regex(@"\w+://(?:[a-zA-Z]|[0-9]|[$-_@.&+])+
+        readonly Regex tokenizationRules = new Regex(@"
+[\w\u0301]+://(?:[a-zA-Z]|[0-9]|[$-_@.&+])+
 |[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+
-|[0-9]+-[а-яА-ЯіїІЇ'’`]+
+|[0-9]+-[а-яА-ЯіїІЇ'’`\u0301]+
 |[+-]?[0-9](?:[0-9,.-]*[0-9])?
-|[\w](?:[\w'’`-]?[\w]+)*
-|\w.(?:\\w.)+\w?
-|[""#$%&*+,/:;<=>@^`~…\\(\\)⟨⟩{}\[\|\]‒–—―«»“”‘’'№]
+|[\w\u0301](?:[\w'’`-\u0301]?[\w\u0301]+)*
+|[\w\u0301].(?:[\w\u0301].)+[\w\u0301]?
+|[""#$%&*+,/:;<=>@^`~…()⟨⟩{}\[\|\]‒–—―«»“”‘’'№]
 |[.!?]+
-|-+",RegexOptions.Compiled);
+|-+", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
         readonly char[] endings = {'.', '!', '?', '…', '»'};
         #endregion
 
-        public string TokenizeText(string input)
+        /// <summary>
+        /// Tokenize input text to paragraphs, sentences and words.
+        ///
+        /// Tokenization to paragraphs is done using simple Newline algorithm
+        /// For sentences and words tokenizers above are used
+        /// </summary>
+        /// <param name="input">Text to tokenize</param>
+        /// <returns>Text, tokenized into paragraphs, sentences and words</returns>
+        public List<List<List<string>>> TokenizeText(string input)
         {
-            var builder = new StringBuilder();
-            foreach (var line in input.Split(new []{Environment.NewLine}, StringSplitOptions.None))
-            {
-                foreach (var sent in TokenizeSents(line))
-                {
-                    foreach (var word in TokenizeWords(sent))
-                    {
-                        builder.Append(word + " ");
-                    }
-                    builder.Append(Environment.NewLine);
-                }
-                builder.Append(Environment.NewLine);
-            }
-            return builder.ToString();
+            return input.Split(new[] { Environment.NewLine }, StringSplitOptions.None)
+                .Select(line => TokenizeSents(line)
+                    .Select(sent => TokenizeWords(sent).ToList())
+                    .ToList())
+                .ToList();
         }
 
+        /// <summary>
+        /// Tokenize input stream to paragraphs, sentences and words and writes it in other stream
+        ///
+        /// Tokenization to paragraphs is done using simple Newline algorithm
+        /// For sentences and words tokenizers above are used
+        /// </summary>
+        /// <param name="reader">Reader of input stream</param>
+        /// <param name="writer">Writer of output stream</param>
         public void TokenizeStream(StreamReader reader, StreamWriter writer)
         {
             while (!reader.EndOfStream)
@@ -79,7 +87,12 @@ namespace LangUkDotNet
             }
         }
 
-        private IEnumerable<string> TokenizeSents(string s)
+        /// <summary>
+        /// Tokenize input text to sentences.
+        /// </summary>
+        /// <param name="s">Text to tokenize</param>
+        /// <returns>sentences</returns>
+        public IEnumerable<string> TokenizeSents(string s)
         {
             var spans = Regex.Matches(s, "[^\\s]+");
 
@@ -119,7 +132,12 @@ namespace LangUkDotNet
             return rez;
         }
 
-        private IEnumerable<string> TokenizeWords(string s)
+        /// <summary>
+        /// Tokenize input text to words.
+        /// </summary>
+        /// <param name="s">Text to tokenize</param>
+        /// <returns>words</returns>
+        public IEnumerable<string> TokenizeWords(string s)
         {
             return tokenizationRules.Matches(s).Cast<Match>().Select(m => m.Value);
         }
