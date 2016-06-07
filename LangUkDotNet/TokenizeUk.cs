@@ -55,8 +55,8 @@ namespace LangUkDotNet
         /// <returns>Text, tokenized into paragraphs, sentences and words</returns>
         public List<List<List<string>>> TokenizeText(string input)
         {
-            return input.Split(new[] { Environment.NewLine }, StringSplitOptions.None)
-                .Select(line => TokenizeSents(line)
+            return input.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => TokenizeSentences(line)
                     .Select(sent => TokenizeWords(sent).ToList())
                     .ToList())
                 .ToList();
@@ -75,7 +75,7 @@ namespace LangUkDotNet
             while (!reader.EndOfStream)
             {
                 var line = reader.ReadLine();
-                foreach (var sent in TokenizeSents(line))
+                foreach (var sent in TokenizeSentences(line))
                 {
                     foreach (var word in TokenizeWords(sent))
                     {
@@ -92,7 +92,7 @@ namespace LangUkDotNet
         /// </summary>
         /// <param name="s">Text to tokenize</param>
         /// <returns>sentences</returns>
-        public IEnumerable<string> TokenizeSents(string s)
+        public IEnumerable<string> TokenizeSentences(string s)
         {
             var spans = Regex.Matches(s, "[^\\s]+");
 
@@ -102,7 +102,7 @@ namespace LangUkDotNet
             for (int i = 0; i < spans.Count; i++)
             {
                 var span = spans[i];
-                var tok = s.Substring(span.Index, span.Length);
+                var tok = span.Value;
                 if (i == spans.Count - 1)
                 {
                     var length = span.Index + span.Length - off;
@@ -111,11 +111,10 @@ namespace LangUkDotNet
                 }
                 else if (endings.Contains(tok[tok.Length - 1]))
                 {
-                    var tok1position = Regex.Match(tok, "[.!?…»]");
-                    var tok1 = tok.Substring(tok1position.Index);
-                    var nextTok = s.Substring(spans[i + 1].Index, spans[i + 1].Length);
+                    var tok1 = Regex.Match(tok, "[.!?…»]").Value;
+                    var nextTok = spans[i + 1].Value;
                     if (nextTok[0].IsUpper()
-                        && !tok1.IsUpper()
+                        && !tok1[0].IsUpper()
                         && !(
                             tok[tok.Length - 1] != '.' ||
                             tok1[0] == '(' || 
@@ -125,7 +124,7 @@ namespace LangUkDotNet
                     {
                         var length = span.Index + span.Length - off;
                         rez.Add(s.Substring(off, length));
-                        off = spans[i + 1].Index + spans[i + 1].Length;
+                        off = spans[i + 1].Index;
                     }
                 }
             }
