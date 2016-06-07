@@ -1,0 +1,8 @@
+language: csharp
+solution: LangUkDotNet.sln
+install:
+  - nuget restore LangUkDotNet.sln
+  - nuget install NUnit.Runners -Version 3.2.1 -OutputDirectory testrunner
+script:
+  - xbuild /p:Configuration=Release LangUkDotNet.sln
+  - mono ./testrunner/NUnit.Runners.3.2.1/tools/nunit-console.exe ./LangUkDotNet.Tests/bin/Release/LangUkDotNet.Tests.dll
