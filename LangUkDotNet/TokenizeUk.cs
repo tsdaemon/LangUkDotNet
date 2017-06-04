@@ -94,9 +94,8 @@ namespace LangUkDotNet
         /// <returns>sentences</returns>
         public IEnumerable<string> TokenizeSentences(string s)
         {
-            var spans = Regex.Matches(s, "[^\\s]+");
+            var spans = Regex.Matches(s, @"[^\s]+");
 
-            var rez = new List<string>();
             var off = 0;
 
             for (int i = 0; i < spans.Count; i++)
@@ -106,29 +105,24 @@ namespace LangUkDotNet
                 if (i == spans.Count - 1)
                 {
                     var length = span.Index + span.Length - off;
-                    var sub = s.Substring(off, length);
-                    rez.Add(sub);
+                    yield return s.Substring(off, length);
                 }
                 else if (endings.Contains(tok[tok.Length - 1]))
                 {
-                    var tok1 = Regex.Match(tok, "[.!?…»]").Value;
+                    var tok1 = tok.Length > 1 ? tok[tok.Length - 2] : default(char);
                     var nextTok = spans[i + 1].Value;
                     if (nextTok[0].IsUpper()
-                        && !tok1[0].IsUpper()
-                        && !(
-                            tok[tok.Length - 1] != '.' ||
-                            tok1[0] == '(' || 
-                            abbrs.Contains(tok)
-                            )
-                        )
+                        && !tok1.IsUpper()
+                        && !(tok[tok.Length - 1] != '.' ||
+                            tok1 == '(' || 
+                            abbrs.Contains(tok)))
                     {
                         var length = span.Index + span.Length - off;
-                        rez.Add(s.Substring(off, length));
+                        yield return s.Substring(off, length);
                         off = spans[i + 1].Index;
                     }
                 }
             }
-            return rez;
         }
 
         /// <summary>

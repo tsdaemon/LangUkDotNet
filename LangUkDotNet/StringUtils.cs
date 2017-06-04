@@ -2,7 +2,7 @@
 
 namespace LangUkDotNet
 {
-    static class StringUtils
+    public static class StringUtils
     {
         public static bool IsUpper(this char s)
         {
